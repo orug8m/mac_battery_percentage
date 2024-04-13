@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "mac-battery-percentage"
+version = "0.1.0"
+description = ""
+authors = ["orug8m <licht7xinoza1@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.12"
+psutil = "^5.9.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
