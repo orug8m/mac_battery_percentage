@@ -1,47 +1,52 @@
-import os
-import psutil
-import requests
-import logging
-
-import json
-import time
+import base64
 import hashlib
 import hmac
-import base64
+import json
+import logging
+import os
+import time
 import uuid
 
+import psutil
+import requests
+
 TOKEN = os.environ["SWITCH_BOT_TOKEN"]
-SECRET = bytes(os.environ["SWITCH_BOT_SECRET"], 'utf-8')
+SECRET = bytes(os.environ["SWITCH_BOT_SECRET"], "utf-8")
 PLUG_MINI_LETS_BUILD_DEVICE_ID = os.environ["PLUG_MINI_LETS_BUILD_DEVICE_ID"]
 PLUG_MINI_TALK_TO_ME_DEVICE_ID = os.environ["PLUG_MINI_TALK_TO_ME_DEVICE_ID"]
 
-API_HOST = 'https://api.switch-bot.com'
+API_HOST = "https://api.switch-bot.com"
 DEBIVELIST_URL = f"{API_HOST}/v1.1/devices"
 t = str(int(round(time.time() * 1000)))
 nonce = uuid.uuid4()
-string_to_sign = '{}{}{}'.format(TOKEN, t, nonce)
-string_to_sign = bytes(string_to_sign, 'utf-8')
-sign = base64.b64encode(hmac.new(SECRET, msg=string_to_sign, digestmod=hashlib.sha256).digest())
+string_to_sign = "{}{}{}".format(TOKEN, t, nonce)
+string_to_sign = bytes(string_to_sign, "utf-8")
+sign = base64.b64encode(
+    hmac.new(SECRET, msg=string_to_sign, digestmod=hashlib.sha256).digest()
+)
 
 HEADERS = {
-    'Authorization': TOKEN,
-    'Content-Type': 'application/json; charset=utf8',
-    'charset': 'utf8',
-    't': str(t),
-    'sign': str(sign, 'utf-8'),
-    'nonce': str(nonce),
+    "Authorization": TOKEN,
+    "Content-Type": "application/json; charset=utf8",
+    "charset": "utf8",
+    "t": str(t),
+    "sign": str(sign, "utf-8"),
+    "nonce": str(nonce),
 }
+
 
 def logger():
     logger = logging.getLogger(__name__)
-    logging.basicConfig(level=logging.INFO, encoding='utf-8',filename='./log/development.log')
+    logging.basicConfig(
+        level=logging.INFO, encoding="utf-8", filename="./log/development.log"
+    )
     return logger
 
 
 def _get_request(url):
     res = requests.get(url, headers=HEADERS)
     data = res.json()
-    if data['message'] == 'success':
+    if data["message"] == "success":
         return res.json()
     return {}
 
@@ -49,7 +54,7 @@ def _get_request(url):
 def _post_request(url, params):
     res = requests.post(url, data=json.dumps(params), headers=HEADERS)
     data = res.json()
-    if data['message'] == 'success':
+    if data["message"] == "success":
         return res.json()
     return {}
 
@@ -65,11 +70,13 @@ def get_device_list():
 #     devices = get_device_list()
 #     return devices
 
+
 def get_device_status(device_id):
     try:
         return _get_request(f"{DEBIVELIST_URL}/{device_id}/status")["body"]
     except:
         return
+
 
 # Plug Mini commands: {"command": "turnOn"}, {"command": "turnOff"}, {"command": "toggle"}
 def post_device_control_commands(device_id, params):
@@ -77,6 +84,7 @@ def post_device_control_commands(device_id, params):
         return _post_request(f"{DEBIVELIST_URL}/{device_id}/commands", params)["body"]
     except:
         return
+
 
 # percent: int
 def main(percent):
@@ -89,10 +97,10 @@ def main(percent):
 
     device_status = get_device_status(PLUG_MINI_LETS_BUILD_DEVICE_ID)
     print(device_status)
-    power = device_status['power']
+    power = device_status["power"]
 
-    power_on = power == 'on'
-    power_off = power == 'off'
+    power_on = power == "on"
+    power_off = power == "off"
     enough = percent > 80
     shortage = percent < 20
 
@@ -104,14 +112,14 @@ def main(percent):
     if shortage and power_off:
         params = {"command": "turnON"}
         print(params)
-        logger.info("{}, {}".format(percent,'off'))
+        logger.info("{}, {}".format(percent, "off"))
         post_device_control_commands(PLUG_MINI_LETS_BUILD_DEVICE_ID, params)
     elif enough and power_on:
         params = {"command": "turnOFF"}
         print(params)
-        logger.info("{}, {}".format(percent,'on'))
+        logger.info("{}, {}".format(percent, "on"))
         post_device_control_commands(PLUG_MINI_LETS_BUILD_DEVICE_ID, params)
-    logger.info("{}, {}".format(percent,'keep'))
+    logger.info("{}, {}".format(percent, "keep"))
 
 
 if __name__ == "__main__":
@@ -119,5 +127,5 @@ if __name__ == "__main__":
     percent = battery.percent
     logger = logger()
 
-    print("Battery: ", percent, '%')
+    print("Battery: ", percent, "%")
     main(percent)

@@ -20,3 +20,8 @@ $ crontab -e
 # python, direnvコマンドが必要
 */5 8-23 * * * cd ~/ghq/github.com/orug8m/mac_battery_percentage && /usr/local/bin/direnv exec . ~/.anyenv/envs/pyenv/shims/python src/main.py
 ```
+
+## linter
+```
+flake8 . && black . && isort .
+```
