@@ -2,7 +2,12 @@
 
 poetryを使用します
 ```bash
-curl -sSL https://install.python-poetry.org | python3 -
+pip install poetry
+# curl -sSL https://install.python-poetry.org | python3 -
+
+poetry install --no-root
+
+cp .envrc{,.sample}
 ```
 
 ## local起動
