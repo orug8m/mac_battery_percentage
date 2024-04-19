@@ -7,7 +7,7 @@ pip install poetry
 
 poetry install --no-root
 
-cp .envrc{,.sample}
+cp .envrc{.sample,}
 ```
 
 ## local起動
