@@ -2,13 +2,14 @@ import base64
 import hashlib
 import hmac
 import json
-import logging
 import os
 import time
 import uuid
 
 import psutil
 import requests
+
+from logger import Logger
 
 TOKEN = os.environ["SWITCH_BOT_TOKEN"]
 SECRET = bytes(os.environ["SWITCH_BOT_SECRET"], "utf-8")
@@ -35,97 +36,94 @@ HEADERS = {
 }
 
 
-def logger():
-    logger = logging.getLogger(__name__)
-    logging.basicConfig(
-        level=logging.INFO, encoding="utf-8", filename="./log/development.log"
-    )
-    return logger
+class SwitchBot:
+    def __init__(self):
+        self.logger = Logger()
 
+    def _get_request(self, url):
+        res = requests.get(url, headers=HEADERS)
+        data = res.json()
+        if data["message"] == "success":
+            return data
+        else:
+            self.logger.error(data)
+            return {}
 
-def _get_request(url):
-    res = requests.get(url, headers=HEADERS)
-    data = res.json()
-    if data["message"] == "success":
-        return res.json()
-    return {}
+    def _post_request(self, url, params):
+        res = requests.post(url, data=json.dumps(params), headers=HEADERS)
+        data = res.json()
+        if data["message"] == "success":
+            return data
+        else:
+            self.logger.error(data)
+            return {}
 
+    def get_device_list(self):
+        try:
+            return self._get_request(DEBIVELIST_URL)["body"]
+        except Exception:
+            return
 
-def _post_request(url, params):
-    res = requests.post(url, data=json.dumps(params), headers=HEADERS)
-    data = res.json()
-    if data["message"] == "success":
-        return res.json()
-    return {}
+    # def get_virtual_device_list():
+    #     devices = get_device_list()
+    #     return devices
 
+    def get_device_status(self, device_id):
+        try:
+            return self._get_request(f"{DEBIVELIST_URL}/{device_id}/status")["body"]
+        except Exception:
+            return
 
-def get_device_list():
-    try:
-        return _get_request(DEBIVELIST_URL)["body"]
-    except:
-        return
+    # Plug Mini commands: {"command": "turnOn"}, {"command": "turnOff"}, {"command": "toggle"}
+    def post_device_control_commands(self, device_id, params):
+        try:
+            res = self._post_request(f"{DEBIVELIST_URL}/{device_id}/commands", params)
+            return res["body"]
+        except Exception:
+            return
 
+    def post_toggle_status(self, params, device_id):
+        post_param = {**params, **{"parameter": "default", "commandType": "command"}}
+        return self.post_device_control_commands(device_id, post_param)
 
-# def get_virtual_device_list():
-#     devices = get_device_list()
-#     return devices
+    def fetch_mac_battery_percentile(self):
+        battery = psutil.sensors_battery()
+        return battery.percent
 
+    # percent: int
+    def main(self):
+        # device_list = get_device_list()
+        # print(device_list)
 
-def get_device_status(device_id):
-    try:
-        return _get_request(f"{DEBIVELIST_URL}/{device_id}/status")["body"]
-    except:
-        return
+        # for device in device_list['deviceList']:
+        #     device_status = get_device_status(device['deviceId'])
+        #     print(device_status)
+        logger = Logger()
 
+        device_status = self.get_device_status(PLUG_MINI_LETS_BUILD_DEVICE_ID)
+        power = device_status["power"]
+        percent = self.fetch_mac_battery_percentile()
 
-# Plug Mini commands: {"command": "turnOn"}, {"command": "turnOff"}, {"command": "toggle"}
-def post_device_control_commands(device_id, params):
-    try:
-        return _post_request(f"{DEBIVELIST_URL}/{device_id}/commands", params)["body"]
-    except:
-        return
+        enough = percent > 80
+        shortage = percent < 20
+        power_on = power == "on"
+        power_off = power == "off"
 
-
-# percent: int
-def main(percent):
-    device_list = get_device_list()
-    # print(device_list)
-
-    # for device in device_list['deviceList']:
-    #     device_status = get_device_status(device['deviceId'])
-    #     print(device_status)
-
-    device_status = get_device_status(PLUG_MINI_LETS_BUILD_DEVICE_ID)
-    print(device_status)
-    power = device_status["power"]
-
-    power_on = power == "on"
-    power_off = power == "off"
-    enough = percent > 80
-    shortage = percent < 20
-
-    print("Power ON: ", power_on)
-    print("Power OFF:", power_off)
-    print("Percent Enough: ", enough)
-    print("Percent Shortage: ", shortage)
-
-    if shortage and power_off:
-        params = {"command": "turnON"}
-        print(params)
-        logger.info("{}, {}".format(percent, "off"))
-        post_device_control_commands(PLUG_MINI_LETS_BUILD_DEVICE_ID, params)
-    elif enough and power_on:
-        params = {"command": "turnOFF"}
-        print(params)
-        logger.info("{}, {}".format(percent, "on"))
-        post_device_control_commands(PLUG_MINI_LETS_BUILD_DEVICE_ID, params)
-    logger.info("{}, {}".format(percent, "keep"))
+        if shortage and power_off:
+            logger.info("{}, {}".format(percent, "turn on"))
+            self.post_toggle_status(
+                {"command": "turnOn"}, PLUG_MINI_LETS_BUILD_DEVICE_ID
+            )
+        elif enough and power_on:
+            logger.info("{}, {}".format(percent, "turn off"))
+            self.post_toggle_status(
+                {"command": "turnOff"}, PLUG_MINI_LETS_BUILD_DEVICE_ID
+            )
+        else:
+            logger.info("{}, {}".format(percent, "keep"))
 
 
 if __name__ == "__main__":
-    battery = psutil.sensors_battery()
-    percent = battery.percent
-    logger = logger()
-
-    print("Battery: ", percent, "%")
-    main(percent)
+    switch_bot = SwitchBot()
+    print("Battery: ", switch_bot.fetch_mac_battery_percentile(), "%")
+    switch_bot.main()
