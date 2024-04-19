@@ -23,7 +23,12 @@ $ crontab -e
 
 # python コマンドへのfull pathか、環境変数をreloadして付与するかをして、パスを通して起動する.
 # python, direnvコマンドが必要
-*/5 8-23 * * * cd ~/ghq/github.com/orug8m/mac_battery_percentage && /usr/local/bin/direnv exec . ~/.anyenv/envs/pyenv/shims/python src/main.py
+
+# case: intel Mac
+*/10 0-23 * * * cd ~/ghq/github.com/orug8m/mac_battery_percentage && /usr/local/bin/direnv exec . ~/.anyenv/envs/pyenv/shims/python src/main.py
+
+# Apple Silicone Mac
+cd ~/ghq/github.com/orug8m/mac_battery_percentage && /opt/homebrew/bin/direnv exec . ~/.anyenv/envs/pyenv/shims/python src/main.py
 ```
 
 ## linter
