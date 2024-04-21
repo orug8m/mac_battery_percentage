@@ -25,10 +25,10 @@ $ crontab -e
 # python, direnvコマンドが必要
 
 # case: intel Mac
-*/10 0-23 * * * cd ~/ghq/github.com/orug8m/mac_battery_percentage && /usr/local/bin/direnv exec . ~/.anyenv/envs/pyenv/shims/python src/main.py
+*/10 0-23 * * * cd ~/ghq/github.com/${user}/mac_battery_percentage && /usr/local/bin/direnv exec . ~/.anyenv/envs/pyenv/shims/python src/main.py
 
 # Apple Silicone Mac
-cd ~/ghq/github.com/orug8m/mac_battery_percentage && /opt/homebrew/bin/direnv exec . ~/.anyenv/envs/pyenv/shims/python src/main.py
+cd ~/ghq/github.com/${user}/mac_battery_percentage && /opt/homebrew/bin/direnv exec . ~/.anyenv/envs/pyenv/shims/python src/main.py
 ```
 
 ## linter

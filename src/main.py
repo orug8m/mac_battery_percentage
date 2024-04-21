@@ -1,3 +1,4 @@
+import argparse
 import base64
 import hashlib
 import hmac
@@ -99,6 +100,12 @@ class SwitchBot:
         #     device_status = get_device_status(device['deviceId'])
         #     print(device_status)
         logger = Logger()
+        parser = argparse.ArgumentParser()
+        parser.add_argument("--force_on", action="store_true")
+        parser.add_argument("--force_off", action="store_true")
+
+        force_on = parser.parse_args().force_on
+        force_off = parser.parse_args().force_off
 
         device_status = self.get_device_status(PLUG_MINI_LETS_BUILD_DEVICE_ID)
         power = device_status["power"]
@@ -109,12 +116,12 @@ class SwitchBot:
         power_on = power == "on"
         power_off = power == "off"
 
-        if shortage and power_off:
+        if (shortage and power_off) or force_on:
             logger.info("{}, {}".format(percent, "turn on"))
             self.post_toggle_status(
                 {"command": "turnOn"}, PLUG_MINI_LETS_BUILD_DEVICE_ID
             )
-        elif enough and power_on:
+        elif (enough and power_on) or force_off:
             logger.info("{}, {}".format(percent, "turn off"))
             self.post_toggle_status(
                 {"command": "turnOff"}, PLUG_MINI_LETS_BUILD_DEVICE_ID

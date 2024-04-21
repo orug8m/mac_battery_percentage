@@ -1,6 +1,7 @@
 import logging
 from datetime import datetime
 
+
 class Logger:
     def __init__(self):
         self.logger = logging.getLogger(__name__)
