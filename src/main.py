@@ -43,7 +43,9 @@ class RequestError(Exception):
 
 
 class SwitchBot:
-    def __init__(self):
+    def __init__(self, force_on, force_off):
+        self.force_on = force_on
+        self.force_off = force_off
         self.logger = Logger()
 
     @retry(RequestError, tries=3, delay=1)
@@ -101,14 +103,6 @@ class SwitchBot:
         return battery.percent
 
     def main(self):
-        logger = Logger()
-        parser = argparse.ArgumentParser()
-        parser.add_argument("--force_on", action="store_true")
-        parser.add_argument("--force_off", action="store_true")
-
-        force_on = parser.parse_args().force_on
-        force_off = parser.parse_args().force_off
-
         device_status = self.get_device_status(PLUG_MINI_LETS_BUILD_DEVICE_ID)
         power = device_status["power"]
         percent = self.fetch_mac_battery_percentile()
@@ -117,21 +111,28 @@ class SwitchBot:
         shortage = percent < 20
         power_on = power == "on"
 
-        if (shortage and not power_on) or force_on:
-            logger.info("{}, {}".format(percent, "turn on"))
+        if (shortage and not power_on) or self.force_on:
+            self.logger.info("{}, {}".format(percent, "turn on"))
             self.post_toggle_status(
                 {"command": "turnOn"}, PLUG_MINI_LETS_BUILD_DEVICE_ID
             )
-        elif (enough and power_on) or force_off:
-            logger.info("{}, {}".format(percent, "turn off"))
+        elif (enough and power_on) or self.force_off:
+            self.logger.info("{}, {}".format(percent, "turn off"))
             self.post_toggle_status(
                 {"command": "turnOff"}, PLUG_MINI_LETS_BUILD_DEVICE_ID
             )
         else:
-            logger.info("{}, {}".format(percent, "keep"))
+            self.logger.info("{}, {}".format(percent, "keep"))
 
 
 if __name__ == "__main__":
-    switch_bot = SwitchBot()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--force_on", action="store_true")
+    parser.add_argument("--force_off", action="store_true")
+
+    force_on = parser.parse_args().force_on
+    force_off = parser.parse_args().force_off
+
+    switch_bot = SwitchBot(force_on, force_off)
     print("Battery: ", switch_bot.fetch_mac_battery_percentile(), "%")
     switch_bot.main()
