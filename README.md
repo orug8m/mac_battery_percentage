@@ -14,6 +14,9 @@ cp .envrc{.sample,}
 ```bash
 cd /mac_battery_percentage
 python src/main.py
+
+# force_on, force_offオプションも用意しています
+python src/main.py --force_off
 ```
 
 ## cron
