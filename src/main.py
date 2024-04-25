@@ -9,6 +9,7 @@ import uuid
 
 import psutil
 import requests
+from retry import retry
 
 from logger import Logger
 
@@ -37,32 +38,40 @@ HEADERS = {
 }
 
 
+class RequestError(Exception):
+    pass
+
+
 class SwitchBot:
     def __init__(self):
         self.logger = Logger()
 
+    @retry(RequestError, tries=3, delay=1)
     def _get_request(self, url):
         res = requests.get(url, headers=HEADERS)
         data = res.json()
+
         if data["message"] == "success":
             return data
         else:
             self.logger.error(data)
-            return {}
+            raise RequestError("Failed to get request")
 
+    @retry(RequestError, tries=3, delay=1)
     def _post_request(self, url, params):
         res = requests.post(url, data=json.dumps(params), headers=HEADERS)
         data = res.json()
+
         if data["message"] == "success":
             return data
         else:
             self.logger.error(data)
-            return {}
+            raise RequestError("Failed to post request")
 
     def get_device_list(self):
         try:
             return self._get_request(DEBIVELIST_URL)["body"]
-        except Exception:
+        except RequestError:
             return
 
     # def get_virtual_device_list():
@@ -72,7 +81,7 @@ class SwitchBot:
     def get_device_status(self, device_id):
         try:
             return self._get_request(f"{DEBIVELIST_URL}/{device_id}/status")["body"]
-        except Exception:
+        except RequestError:
             return
 
     # Plug Mini commands: {"command": "turnOn"}, {"command": "turnOff"}, {"command": "toggle"}
@@ -80,7 +89,7 @@ class SwitchBot:
         try:
             res = self._post_request(f"{DEBIVELIST_URL}/{device_id}/commands", params)
             return res["body"]
-        except Exception:
+        except RequestError:
             return
 
     def post_toggle_status(self, params, device_id):
@@ -91,14 +100,7 @@ class SwitchBot:
         battery = psutil.sensors_battery()
         return battery.percent
 
-    # percent: int
     def main(self):
-        # device_list = get_device_list()
-        # print(device_list)
-
-        # for device in device_list['deviceList']:
-        #     device_status = get_device_status(device['deviceId'])
-        #     print(device_status)
         logger = Logger()
         parser = argparse.ArgumentParser()
         parser.add_argument("--force_on", action="store_true")
@@ -114,9 +116,8 @@ class SwitchBot:
         enough = percent > 80
         shortage = percent < 20
         power_on = power == "on"
-        power_off = power == "off"
 
-        if (shortage and power_off) or force_on:
+        if (shortage and not power_on) or force_on:
             logger.info("{}, {}".format(percent, "turn on"))
             self.post_toggle_status(
                 {"command": "turnOn"}, PLUG_MINI_LETS_BUILD_DEVICE_ID
